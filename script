@@ -1,0 +1,168 @@
+###########################################################
+# Script for analysis for Quintana et al., (under review) #
+###########################################################
+
+# Compare continuous and cardioresipratory variables using the "perfect t-test" script, which was retrieved from https://github.com/Lakens/perfect-t-test. 
+
+# Load file
+
+dat <- read.csv(file = "dat.csv" ) # Whole file
+datc <- read.csv(file = "datc.csv" ) # File with controls only
+datp <- read.csv(file = "datp.csv" ) # File with patients only
+
+#Install and load required packages
+
+install.packages("dplyr")
+install.packages("BayesFactor")
+install.packages("psych")
+install.packages("lsr")
+install.packages("devtools")
+devtools::install_github("rasmusab/bayesian_first_aid")
+
+
+library("dplyr")
+library("BayesFactor")
+library("psych")
+library("lsr")
+library("BayesianFirstAid")
+
+## Overall descriptives ##
+
+#Numbers per diagnosis group 
+
+npdg <- data.frame (table (dat$Patient))
+npdg
+
+#Numbers per group split by gender
+
+npgg <- data.frame (table (dat$Patient, dat$Gender))
+npgg
+
+#Numbers per broad diagnosis split by gender
+
+npbd <- data.frame (table (dat$HC_SZ_BD, dat$Gender))
+npbd
+
+#Numbers per by clinical diagnosis
+
+npcd <- data.frame (table (dat$Diagnosis))
+npcd
+
+# Descriptives for clincal group
+
+#PANSS total
+
+c.desc.pt <- describe(dat$score_panss)
+c.desc.pt
+
+#PANSS positive
+
+c.desc.pp <- describe(dat$score_p)
+c.desc.pp
+
+#PANSS negative
+
+c.desc.pn <- describe(dat$score_n)
+c.desc.pn
+
+#PANSS general
+
+c.desc.pg <- describe(dat$score_g)
+c.desc.pg
+
+#Chi-squared test for gender and group
+
+ctgg <- chisq.test(dat$Gender,dat$Patient)
+ctgg
+
+## Bayes correlations ##
+
+# Patient correlation
+
+patient.bc <- bayes.cor.test( ~ lg_hf + resp_freq, data = dphf[ dphf$Patient == "Patient",])
+patient.bc 
+plot(patient.bc)
+
+p.bc <- bayes.cor.test( ~ lg_hf + resp_freq, data = dat[ dat$Patient == "Patient",])
+p.bc 
+plot(p.bc)
+
+# Control correlation
+
+control.bc <- bayes.cor.test( ~ lg_hf + resp_freq, data = dphf[ dphf$Patient == "Control",])
+control.bc
+plot(control.bc)
+
+c.bc <- bayes.cor.test( ~ lg_hf + resp_freq, data = dat[ dat$Patient == "Control",])
+c.bc
+plot(c.bc)
+
+# Comparing correlations
+
+p_mcmc <- as.data.frame(p.bc)
+c_mcmc <- as.data.frame(c.bc)
+
+
+hist(c_mcmc$rho - p_mcmc$rho, 30, xlim = c(-1, 1), main = "", yaxt = "n")
+mean(p_mcmc$rho - c_mcmc$rho < 0)
+
+# Heart rate
+
+# Patient correlation
+
+p.bchr <- bayes.cor.test( ~ hr + resp_freq, data = dat[ dat$Patient == "Patient",])
+p.bchr 
+plot(p.bchr)
+
+# Control correlation
+
+control.bchr <- bayes.cor.test( ~ hr + resp_freq, data = dphf[ dphf$Patient == "Control",])
+control.bchr
+plot(control.bchr)
+
+c.bchr <- bayes.cor.test( ~ hr + resp_freq, data = dat[ dat$Patient == "Control",])
+c.bchr
+plot(c.bchr)
+
+# Comparing correlations
+
+phr_mcmc <- as.data.frame(p.bchr)
+chr_mcmc <- as.data.frame(c.bchr)
+
+hist(phr_mcmc$rho - chr_mcmc$rho, 30, xlim = c(-1, 1), main = "", yaxt = "n")
+mean(chr_mcmc$rho - phr_mcmc$rho < 0)
+
+# NHST Pearson correlations
+
+# Patients
+
+# HRV
+p.hrv.c <- cor.test(datp$lg_hf,datp$resp_freq)
+p.hrv.c
+
+# Heart rate
+p.hr.c <- cor.test(datp$hr,datp$resp_freq)
+p.hr.c
+
+
+# Controls
+
+# HRV
+c.hrv.c <- cor.test(datc$lg_hf,datc$resp_freq)
+c.hrv.c
+
+# Heart rate
+c.hr.c <- cor.test(datc$hr,datc$resp_freq)
+c.hr.c
+
+# Welch's T-tests
+
+# HRV
+
+hrv.ac <- independentSamplesTTest(formula = lg_hf ~ any_ac_med, data = datc)              
+hrv.ac 
+
+# Respiration
+
+resp.ac <- independentSamplesTTest(formula = resp_freq ~ any_ac_med, data = datc)              
+resp.ac 
